@@ -7,6 +7,10 @@
 
 typedef struct cme_Error *cmi_error_t;
 
+static inline void cmi_error_destroy(cmi_error_t *error) {
+  cme_error_destroy((struct cme_Error *)*error);
+}
+
 cmi_error_t cmi_init(void);
 void cmi_close(void);
 
