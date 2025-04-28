@@ -10,8 +10,9 @@ typedef struct cme_Error *cmi_error_t;
 cmi_error_t cmi_init(void);
 void cmi_close(void);
 
-void cmi_register(char *id, void *init_func, void *close_func,
-                  uint32_t dependencies_length, char **dependencies);
+void cmi_register(const char *id, void *init_func, void *close_func,
+                  const uint32_t dependencies_length,
+                  const char **dependencies);
 
 #define CMI_REGITSER(id, init_func, close_func, dependencies,                  \
                      dependencies_length)                                      \
