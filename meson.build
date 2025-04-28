@@ -43,4 +43,4 @@ cmx_init_dep = declare_dependency(
 # *    Tests
 # ******************************************************************************
 
-# subdir('test')
+subdir('test')
