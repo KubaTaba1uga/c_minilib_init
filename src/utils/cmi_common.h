@@ -9,7 +9,7 @@ struct cmi_Registration {
   char *id;
   bool is_initiated;
   int (*init_func)(void);
-  int (*close_func)(void);
+  void (*close_func)(void);
   struct cmi_Dependencies dependencies;
   struct cmi_Registration *next_reg;
 };

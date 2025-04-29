@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -15,6 +16,7 @@
 static struct cmi_Registration *cmi_registrations = NULL;
 static cmi_error_t cmi_error = NULL;
 
+void cmi_destroy_registration(char *id);
 static cmi_error_t cmi_init_registration(char *id);
 MOCKABLE_STATIC(cmi_error_t cmi_append_registration(
     struct cmi_Registration *registration)) {
@@ -106,6 +108,10 @@ void cmi_destroy(void) {
     cmi_error_destroy(&cmi_error);
   }
 
+  CMI_FOREACH_REGISTRATION(local_registration, cmi_registrations) {
+    cmi_destroy_registration(local_registration->id);
+  }
+
   struct cmi_Registration *local_registration = cmi_registrations;
   cmi_registrations = NULL;
   while (local_registration) {
@@ -124,7 +130,7 @@ cmi_error_t cmi_init_registration(char *id) {
   CMI_FOREACH_REGISTRATION(local_registration, cmi_registrations) {
     if (strcmp(id, local_registration->id) == 0) {
       if (local_registration->is_initiated) {
-        goto stop_loop;
+        break;
       }
 
       for (uint32_t i = 0;
@@ -135,20 +141,20 @@ cmi_error_t cmi_init_registration(char *id) {
         }
       }
 
-      if ((_err = local_registration->init_func())) {
+      if (local_registration->init_func &&
+          (_err = local_registration->init_func())) {
         return cmi_errorf(_err,
                           "Init func failed for `local_registration->id=%s`\n",
                           local_registration->id);
       }
 
       local_registration->is_initiated = true;
-    stop_loop:
       break;
     }
   }
 
-  // If registration is missing this means it doesn't have any dependencies
-  //    so we can just return NULL as it was succesfully initiated.
+  // If registration is missing this means the package doesn't have any
+  // dependencies so we can just return NULL as it was succesfully initiated.
   return NULL;
 };
 
@@ -158,29 +164,30 @@ void cmi_destroy_registration(char *id) {
   // 2. Destroy every registration from step 1.
   // 3. Destroy this module
   // 4. destroy every modules child
-  struct cmi_Registration *local_registration = cmi_registrations;
-
-  while (local_registration) {
-    if (strcmp(id, local_registration->id) == 0) {
-      if (!local_registration->is_initiated) {
-        goto stop_loop;
+  printf("Closing %s\n", id);
+  CMI_FOREACH_REGISTRATION(local_registration, cmi_registrations) {
+    for (uint32_t i = 0;
+         i < local_registration->dependencies.dependencies_length; i++) {
+      if (strcmp(id, local_registration->dependencies.dependencies[i]) == 0) {
+        cmi_destroy_registration(local_registration->id);
+        break;
       }
-
-      local_registration->close_func();
-
-      /* for (uint32_t i = 0; */
-      /*      i < local_registration->dependencies.dependencies_length; i++) {
-       */
-      /*   if ((err = cmi_init_registration( */
-      /*            local_registration->dependencies.dependencies[i]))) { */
-      /*     return err; */
-      /*   } */
-      /* } */
-
-    stop_loop:
-      local_registration = NULL;
-    } else {
-      local_registration = local_registration->next_reg;
     }
   }
+
+  CMI_FOREACH_REGISTRATION(local_registration, cmi_registrations) {
+    if (strcmp(id, local_registration->id) == 0) {
+      if (!local_registration->is_initiated) {
+        break;
+      }
+
+      if (local_registration->close_func) {
+        local_registration->close_func();
+      }
+
+      local_registration->is_initiated = false;
+      break;
+    }
+  }
+  printf("Closed %s\n", id);
 }
