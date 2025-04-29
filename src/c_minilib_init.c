@@ -11,39 +11,15 @@
 #include "utils/cmi_common.h"
 #include "utils/cmi_dependencies.h"
 #include "utils/cmi_error.h"
-#include "utils/cmi_registration.h"
+
+static void cmi_destroy_registration(char *id);
+static cmi_error_t cmi_init_registration(char *id);
+MOCKABLE_STATIC(
+    cmi_error_t cmi_append_registration(struct cmi_Registration *registration));
 
 static struct cmi_Registration *cmi_registrations = NULL;
+static struct cmi_Settings cmi_settings = {0};
 static cmi_error_t cmi_error = NULL;
-
-void cmi_destroy_registration(char *id);
-static cmi_error_t cmi_init_registration(char *id);
-MOCKABLE_STATIC(cmi_error_t cmi_append_registration(
-    struct cmi_Registration *registration)) {
-  cmi_error_t err;
-  if (!registration) {
-    err =
-        cmi_errorf(EINVAL, "`registration=%p` cannot be NULL\n", registration);
-    goto error_out;
-  }
-
-  if (!cmi_registrations) {
-    cmi_registrations = registration;
-
-  } else {
-    struct cmi_Registration *last_registration = cmi_registrations;
-    CMI_FOREACH_REGISTRATION(tmp, last_registration) {
-      last_registration = tmp;
-    }
-
-    last_registration->next_reg = registration;
-  }
-
-  return NULL;
-
-error_out:
-  return err;
-}
 
 void cmi_register(const char *id, void *init_func, void *close_func,
                   const uint32_t dependencies_length,
@@ -87,10 +63,12 @@ void cmi_register(const char *id, void *init_func, void *close_func,
 };
 
 cmi_error_t cmi_init(void) {
-  if (cmi_error) {
-    return cmi_error;
-  }
   cmi_error_t err;
+  if (cmi_error) {
+    err = cmi_error;
+    cmi_error = NULL;
+    return err;
+  }
 
   struct cmi_Registration *local_registration = cmi_registrations;
   while (local_registration) {
@@ -104,10 +82,6 @@ cmi_error_t cmi_init(void) {
 };
 
 void cmi_destroy(void) {
-  if (cmi_error) {
-    cmi_error_destroy(&cmi_error);
-  }
-
   CMI_FOREACH_REGISTRATION(local_registration, cmi_registrations) {
     cmi_destroy_registration(local_registration->id);
   }
@@ -121,7 +95,16 @@ void cmi_destroy(void) {
     free(local_registration);
     local_registration = next;
   }
+
+  if (cmi_error) {
+    cmi_error_destroy(&cmi_error);
+  }
 };
+
+void cmi_configure(void (*log_func)(enum cmi_LogLevelEnum log_level,
+                                    char *msg)) {
+  cmi_settings.log_func = log_func;
+}
 
 cmi_error_t cmi_init_registration(char *id) {
   cmi_error_t err;
@@ -164,11 +147,13 @@ void cmi_destroy_registration(char *id) {
   // 2. Destroy every registration from step 1.
   // 3. Destroy this module
   // 4. destroy every modules child
-  printf("Closing %s\n", id);
+  CMI_LOG(cmi_settings, cmi_LogLevelEnum_DEBUG, "Closing %s\n", id);
+
   CMI_FOREACH_REGISTRATION(local_registration, cmi_registrations) {
     for (uint32_t i = 0;
          i < local_registration->dependencies.dependencies_length; i++) {
-      if (strcmp(id, local_registration->dependencies.dependencies[i]) == 0) {
+      if (strcmp(id, local_registration->dependencies.dependencies[i]) == 0 &&
+          local_registration->is_initiated) {
         cmi_destroy_registration(local_registration->id);
         break;
       }
@@ -189,5 +174,33 @@ void cmi_destroy_registration(char *id) {
       break;
     }
   }
-  printf("Closed %s\n", id);
+
+  CMI_LOG(cmi_settings, cmi_LogLevelEnum_DEBUG, "Closed %s\n", id);
+}
+
+MOCKABLE_STATIC(cmi_error_t cmi_append_registration(
+    struct cmi_Registration *registration)) {
+  cmi_error_t err;
+  if (!registration) {
+    err =
+        cmi_errorf(EINVAL, "`registration=%p` cannot be NULL\n", registration);
+    goto error_out;
+  }
+
+  if (!cmi_registrations) {
+    cmi_registrations = registration;
+
+  } else {
+    struct cmi_Registration *last_registration = cmi_registrations;
+    CMI_FOREACH_REGISTRATION(tmp, last_registration) {
+      last_registration = tmp;
+    }
+
+    last_registration->next_reg = registration;
+  }
+
+  return NULL;
+
+error_out:
+  return err;
 }

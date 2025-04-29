@@ -3,3 +3,8 @@ option('backtrace',
   value: 'auto',
   description: 'Enable backtrace support in cmi_error_t'
 )
+option('examples',
+  type: 'boolean',
+  value: false,
+  description: 'Build library examples'
+)
