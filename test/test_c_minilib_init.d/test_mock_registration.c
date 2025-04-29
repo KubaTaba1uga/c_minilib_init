@@ -8,9 +8,9 @@
 #include "utils/cmi_dependencies.h"
 #include "utils/cmi_error.h"
 
-static struct cmi_Regitrsation *mock_received_registration = NULL;
+static struct cmi_Registration *mock_received_registration = NULL;
 
-cmi_error_t cmi_append_registration(struct cmi_Regitrsation *registration) {
+cmi_error_t cmi_append_registration(struct cmi_Registration *registration) {
   mock_received_registration = registration;
   return NULL; // Simulate success
 }

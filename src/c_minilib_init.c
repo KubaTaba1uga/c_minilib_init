@@ -10,13 +10,14 @@
 #include "utils/cmi_common.h"
 #include "utils/cmi_dependencies.h"
 #include "utils/cmi_error.h"
+#include "utils/cmi_registration.h"
 
-static struct cmi_Regitrsation *cmi_registrations = NULL;
+static struct cmi_Registration *cmi_registrations = NULL;
 static cmi_error_t cmi_error = NULL;
 
 static cmi_error_t cmi_init_registration(char *id);
 MOCKABLE_STATIC(cmi_error_t cmi_append_registration(
-    struct cmi_Regitrsation *registration)) {
+    struct cmi_Registration *registration)) {
   cmi_error_t err;
   if (!registration) {
     err =
@@ -28,8 +29,12 @@ MOCKABLE_STATIC(cmi_error_t cmi_append_registration(
     cmi_registrations = registration;
 
   } else {
-    registration->next_reg = cmi_registrations;
-    cmi_registrations = registration;
+    struct cmi_Registration *last_registration = cmi_registrations;
+    CMI_FOREACH_REGISTRATION(tmp, last_registration) {
+      last_registration = tmp;
+    }
+
+    last_registration->next_reg = registration;
   }
 
   return NULL;
@@ -50,8 +55,8 @@ void cmi_register(const char *id, void *init_func, void *close_func,
     return;
   }
 
-  struct cmi_Regitrsation *local_registration =
-      malloc(sizeof(struct cmi_Regitrsation));
+  struct cmi_Registration *local_registration =
+      malloc(sizeof(struct cmi_Registration));
   if (!local_registration) {
     cmi_error =
         cmi_errorf(ENOMEM, "Cannot allocate memory for `local_registration`\n");
@@ -67,6 +72,7 @@ void cmi_register(const char *id, void *init_func, void *close_func,
   local_registration->init_func = init_func;
   local_registration->close_func = close_func;
   local_registration->is_initiated = false;
+  local_registration->next_reg = NULL;
 
   if ((cmi_error = cmi_dependencies_init(dependencies_length, dependencies,
                                          &local_registration->dependencies))) {
@@ -84,7 +90,7 @@ cmi_error_t cmi_init(void) {
   }
   cmi_error_t err;
 
-  struct cmi_Regitrsation *local_registration = cmi_registrations;
+  struct cmi_Registration *local_registration = cmi_registrations;
   while (local_registration) {
     if ((err = cmi_init_registration(local_registration->id))) {
       return err;
@@ -100,23 +106,23 @@ void cmi_destroy(void) {
     cmi_error_destroy(&cmi_error);
   }
 
-  struct cmi_Regitrsation *local_registration = cmi_registrations;
+  struct cmi_Registration *local_registration = cmi_registrations;
   cmi_registrations = NULL;
   while (local_registration) {
-    struct cmi_Regitrsation *next = local_registration->next_reg;
+    struct cmi_Registration *next = local_registration->next_reg;
     cmi_dependencies_destroy(&local_registration->dependencies);
+    free(local_registration->id);
     free(local_registration);
     local_registration = next;
   }
 };
 
 cmi_error_t cmi_init_registration(char *id) {
-  struct cmi_Regitrsation *local_registration = cmi_registrations;
   cmi_error_t err;
   int _err;
 
-  while (local_registration) {
-    if (strcmp(id, local_registration->id)) {
+  CMI_FOREACH_REGISTRATION(local_registration, cmi_registrations) {
+    if (strcmp(id, local_registration->id) == 0) {
       if (local_registration->is_initiated) {
         goto stop_loop;
       }
@@ -137,9 +143,7 @@ cmi_error_t cmi_init_registration(char *id) {
 
       local_registration->is_initiated = true;
     stop_loop:
-      local_registration = NULL;
-    } else {
-      local_registration = local_registration->next_reg;
+      break;
     }
   }
 
@@ -147,3 +151,36 @@ cmi_error_t cmi_init_registration(char *id) {
   //    so we can just return NULL as it was succesfully initiated.
   return NULL;
 };
+
+void cmi_destroy_registration(char *id) {
+  // How to destroy registrations?
+  // 1. Find every registration that is using module that needs to be destroyed
+  // 2. Destroy every registration from step 1.
+  // 3. Destroy this module
+  // 4. destroy every modules child
+  struct cmi_Registration *local_registration = cmi_registrations;
+
+  while (local_registration) {
+    if (strcmp(id, local_registration->id) == 0) {
+      if (!local_registration->is_initiated) {
+        goto stop_loop;
+      }
+
+      local_registration->close_func();
+
+      /* for (uint32_t i = 0; */
+      /*      i < local_registration->dependencies.dependencies_length; i++) {
+       */
+      /*   if ((err = cmi_init_registration( */
+      /*            local_registration->dependencies.dependencies[i]))) { */
+      /*     return err; */
+      /*   } */
+      /* } */
+
+    stop_loop:
+      local_registration = NULL;
+    } else {
+      local_registration = local_registration->next_reg;
+    }
+  }
+}
