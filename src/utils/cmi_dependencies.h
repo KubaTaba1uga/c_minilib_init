@@ -15,4 +15,6 @@ cmi_error_t cmi_dependencies_init(const uint32_t dependencies_length,
                                   const char **dependencies,
                                   struct cmi_Dependencies *output);
 
+void cmi_dependencies_destroy(struct cmi_Dependencies *output);
+
 #endif // C_MINILIB_INIT_DEPENDENCIES_H

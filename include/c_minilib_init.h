@@ -12,7 +12,7 @@ static inline void cmi_error_destroy(cmi_error_t *error) {
 }
 
 cmi_error_t cmi_init(void);
-void cmi_close(void);
+void cmi_destroy(void);
 
 void cmi_register(const char *id, void *init_func, void *close_func,
                   const uint32_t dependencies_length,

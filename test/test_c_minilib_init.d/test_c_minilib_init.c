@@ -20,7 +20,7 @@ void setUp(void) { mock_received_registration = NULL; }
 void tearDown(void) {
   if (mock_received_registration) {
     free(mock_received_registration->id);
-    free(mock_received_registration->dependencies.dependencies);
+    cmi_dependencies_destroy(&mock_received_registration->dependencies);
     free(mock_received_registration);
   }
 }

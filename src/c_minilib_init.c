@@ -95,9 +95,18 @@ cmi_error_t cmi_init(void) {
   return NULL;
 };
 
-void cmi_close(void) {
+void cmi_destroy(void) {
   if (cmi_error) {
     cmi_error_destroy(&cmi_error);
+  }
+
+  struct cmi_Regitrsation *local_registration = cmi_registrations;
+  cmi_registrations = NULL;
+  while (local_registration) {
+    struct cmi_Regitrsation *next = local_registration->next_reg;
+    cmi_dependencies_destroy(&local_registration->dependencies);
+    free(local_registration);
+    local_registration = next;
   }
 };
 

@@ -32,10 +32,20 @@ cmi_error_t cmi_dependencies_init(const uint32_t dependencies_length,
   return NULL;
 
 error_dependencies_cleanup:
-  while (i >= 0) {
+  while (i > 0) {
     free(local_dependencies[i--]);
   };
   free(local_dependencies);
 error_out:
   return err;
+}
+
+void cmi_dependencies_destroy(struct cmi_Dependencies *output) {
+  while (output->dependencies_length > 0) {
+    output->dependencies_length--;
+    free(output->dependencies[output->dependencies_length]);
+  };
+
+  free(output->dependencies);
+  output->dependencies = NULL;
 }
