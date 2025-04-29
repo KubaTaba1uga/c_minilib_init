@@ -14,7 +14,7 @@ project('c_minilib_init', 'c',
 # ******************************************************************************
 # *    App
 # ******************************************************************************
-if get_option('backtrace').enabled()
+if get_option('backtrace')
   add_project_arguments('-DCME_ENABLE_BACKTRACE', language: 'c')
 endif
 
@@ -23,8 +23,8 @@ add_project_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
 
 subdir('src')
 
-cmx_mock_sub = subproject('c_minilib_mock')
-cmx_mock_dep = dependency('c_minilib_mock_dep',
+c_minilib_mock_sub = subproject('c_minilib_mock')
+c_minilib_mock_dep = dependency('c_minilib_mock_dep',
   fallback: ['c_minilib_mock', 'c_minilib_mock_dep'],
   required: true,
 )
@@ -35,7 +35,7 @@ c_minilib_error_dep = dependency('c_minilib_error',
   required: true,
 )
 
-c_minilib_init_deps = [c_minilib_error_dep, cmx_mock_dep]
+c_minilib_init_deps = [c_minilib_error_dep, c_minilib_mock_dep]
 c_minilib_init_inc = include_directories('include', 'src')
 c_minilib_init_lib = library('c_minilib_init',
                          sources,
@@ -51,8 +51,9 @@ c_minilib_init_dep = declare_dependency(
 # ******************************************************************************
 # *    Tests
 # ******************************************************************************
-
-subdir('test')
+if get_option('tests')
+   subdir('test')
+endif
 
 # ******************************************************************************
 # *    Examples
