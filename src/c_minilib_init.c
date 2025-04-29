@@ -50,7 +50,7 @@ void cmi_register(const char *id, void *init_func, void *close_func,
   if (!(local_registration->id = strdup(id))) {
     cmi_error = cmi_errorf(
         ENOMEM, "Cannot allocate memory for `local_registration->id`\n");
-    return;
+    goto error_local_reg_cleanup;
   }
 
   local_registration->init_func = init_func;
@@ -60,12 +60,17 @@ void cmi_register(const char *id, void *init_func, void *close_func,
 
   if ((cmi_error = cmi_dependencies_init(dependencies_length, dependencies,
                                          &local_registration->dependencies))) {
-    return;
+    goto error_local_reg_cleanup;
   }
 
   if ((cmi_error = cmi_append_registration(local_registration))) {
-    return;
+    goto error_local_reg_cleanup;
   };
+
+  return;
+
+error_local_reg_cleanup:
+  free(local_registration);
 };
 
 cmi_error_t cmi_init(void) {
@@ -153,7 +158,7 @@ void cmi_destroy_registration(char *id) {
   // 2. Destroy every registration from step 1.
   // 3. Destroy this module
   // 4. destroy every modules child
-  CMI_LOG(cmi_settings, cmi_LogLevelEnum_DEBUG, "Closing %s\n", id);
+  CMI_LOG(cmi_settings, cmi_LogLevelEnum_DEBUG, "Closing %s\n", id); // NOLINT
 
   CMI_FOREACH_REGISTRATION(local_registration, cmi_registrations) {
     for (uint32_t i = 0;
@@ -181,7 +186,7 @@ void cmi_destroy_registration(char *id) {
     }
   }
 
-  CMI_LOG(cmi_settings, cmi_LogLevelEnum_DEBUG, "Closed %s\n", id);
+  CMI_LOG(cmi_settings, cmi_LogLevelEnum_DEBUG, "Closed %s\n", id); // NOLINT
 }
 
 MOCKABLE_STATIC(cmi_error_t cmi_append_registration(
