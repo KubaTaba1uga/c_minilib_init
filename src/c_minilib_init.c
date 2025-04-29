@@ -159,7 +159,7 @@ cmi_error_t cmi_init_registration(char *id) {
 };
 
 void cmi_destroy_registration(char *id) {
-  // How to destroy registrations?
+  // How to destroy registration?
   // 1. Find every registration that is using module that needs to be destroyed
   // 2. Destroy every registration from step 1.
   // 3. Destroy this module

@@ -40,3 +40,24 @@ test_init_exe = executable('test_cmc_init',
 )
 
 test('test_cmc_init', test_init_exe)
+
+test_destroy_name = 'test_destroy.c'
+
+destroy_test_src = files([
+  test_destroy_name, 
+])
+
+test_destroy_exe = executable('test_cmc_destroy',
+  sources: [
+    destroy_test_src,
+    files(
+      '../../src/c_minilib_init.c',
+      '../../src/utils/cmi_dependencies.c',
+    ),
+    test_runner.process(test_destroy_name),
+  ],
+  dependencies: test_dependencies,
+  include_directories: test_includes,
+)
+
+test('test_cmc_destroy', test_destroy_exe)
