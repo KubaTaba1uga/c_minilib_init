@@ -11,13 +11,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct cme_Error *cmi_error_t;
-
-static inline void cmi_error_destroy(cmi_error_t *error) {
-  cme_error_destroy((struct cme_Error *)*error);
-}
-
-cmi_error_t cmi_init(void);
+cme_error_t cmi_init(void);
 void cmi_destroy(void);
 
 void cmi_register(const char *id, void *init_func, void *close_func,

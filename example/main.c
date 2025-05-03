@@ -9,12 +9,12 @@
 #include <stdio.h>
 
 int main(void) {
-  cmi_error_t err;
+  cme_error_t err;
 
   if ((err = cmi_init())) {
     printf("Error dumped to error.txt: %s\n", err->msg);
-    cme_error_dump(err, "error.txt");
-    cmi_error_destroy(&err);
+    cme_error_dump_to_file(err, "error.txt");
+    cmi_destroy();
     return 1;
   }
 

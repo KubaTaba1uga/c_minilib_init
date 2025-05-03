@@ -12,7 +12,6 @@
 #include "c_minilib_init.h"
 #include "utils/cmi_common.h"
 #include "utils/cmi_dependencies.h"
-#include "utils/cmi_error.h"
 
 // Static variables to track calls
 static bool a_init_called = false;
@@ -83,7 +82,7 @@ void test_cmi_register_and_lifecycle(void) {
   const char *a_deps[] = {"B", "C"}; // A depends on both B and C
   cmi_register("A", init_a, close_a, 2, a_deps);
 
-  cmi_error_t err = cmi_init();
+  cme_error_t err = cmi_init();
   TEST_ASSERT_NULL(err);
 
   TEST_ASSERT_TRUE(c_init_called);

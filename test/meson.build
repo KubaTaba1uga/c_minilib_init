@@ -4,7 +4,7 @@ unity_subproject = subproject('unity')
 
 unity_dependency = unity_subproject.get_variable('unity_dep')
 
-test_dependencies = [c_minilib_error_dep, cmx_mock_dep, unity_dependency]
+test_dependencies = [c_minilib_error_dep, c_minilib_mock_dep, unity_dependency]
 
 test_includes = [c_minilib_init_inc]
 

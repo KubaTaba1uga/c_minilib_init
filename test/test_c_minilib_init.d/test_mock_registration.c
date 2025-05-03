@@ -12,11 +12,10 @@
 #include "c_minilib_init.h"
 #include "utils/cmi_common.h"
 #include "utils/cmi_dependencies.h"
-#include "utils/cmi_error.h"
 
 static struct cmi_Registration *mock_received_registration = NULL;
 
-cmi_error_t cmi_append_registration(struct cmi_Registration *registration) {
+cme_error_t cmi_append_registration(struct cmi_Registration *registration) {
   mock_received_registration = registration;
   return NULL; // Simulate success
 }

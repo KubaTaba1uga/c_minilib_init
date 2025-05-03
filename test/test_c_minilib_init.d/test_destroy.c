@@ -12,7 +12,6 @@
 #include "c_minilib_init.h"
 #include "utils/cmi_common.h"
 #include "utils/cmi_dependencies.h"
-#include "utils/cmi_error.h"
 
 // Static variables to track calls
 static bool network_stack_init_called = false;
@@ -127,7 +126,7 @@ void test_close_order_lifecycle(void) {
   const char *ui_deps[] = {"UserSession"};
   cmi_register("UI", init_ui, close_ui, 1, ui_deps);
 
-  cmi_error_t err = cmi_init();
+  cme_error_t err = cmi_init();
   TEST_ASSERT_NULL(err);
 
   TEST_ASSERT_TRUE(network_stack_init_called);

@@ -13,19 +13,19 @@
 
 #include <c_minilib_mock.h>
 
+#include "c_minilib_error.h"
 #include "c_minilib_init.h"
 #include "utils/cmi_common.h"
 #include "utils/cmi_dependencies.h"
-#include "utils/cmi_error.h"
 
 static void cmi_destroy_registration(char *id);
-static cmi_error_t cmi_init_registration(char *id);
+static cme_error_t cmi_init_registration(char *id);
 MOCKABLE_STATIC(
-    cmi_error_t cmi_append_registration(struct cmi_Registration *registration));
+    cme_error_t cmi_append_registration(struct cmi_Registration *registration));
 
 static struct cmi_Registration *cmi_registrations = NULL;
 static struct cmi_Settings cmi_settings = {0};
-static cmi_error_t cmi_error = NULL;
+static cme_error_t cmi_error = NULL;
 
 void cmi_register(const char *id, void *init_func, void *close_func,
                   const uint32_t dependencies_length,
@@ -34,8 +34,13 @@ void cmi_register(const char *id, void *init_func, void *close_func,
     return;
   }
 
+  if (cme_init() != 0) {
+    cmi_error = cme_error(ENOMEM, "Unable to initialize error library");
+    return;
+  };
+
   if (!id) {
-    cmi_error = cmi_errorf(EINVAL, "`id=%p` cannot be NULL\n", id);
+    cmi_error = cme_error(EINVAL, "`id` cannot be NULL\n");
     return;
   }
 
@@ -43,12 +48,12 @@ void cmi_register(const char *id, void *init_func, void *close_func,
       malloc(sizeof(struct cmi_Registration));
   if (!local_registration) {
     cmi_error =
-        cmi_errorf(ENOMEM, "Cannot allocate memory for `local_registration`\n");
+        cme_error(ENOMEM, "Cannot allocate memory for `local_registration`\n");
     return;
   }
 
   if (!(local_registration->id = strdup(id))) {
-    cmi_error = cmi_errorf(
+    cmi_error = cme_error(
         ENOMEM, "Cannot allocate memory for `local_registration->id`\n");
     goto error_local_reg_cleanup;
   }
@@ -73,23 +78,27 @@ error_local_reg_cleanup:
   free(local_registration);
 };
 
-cmi_error_t cmi_init(void) {
-  cmi_error_t err;
+cme_error_t cmi_init(void) {
+
+  cme_error_t err;
   if (cmi_error) {
     err = cmi_error;
     cmi_error = NULL;
-    return err;
+    goto error_out;
   }
 
   struct cmi_Registration *local_registration = cmi_registrations;
   while (local_registration) {
     if ((err = cmi_init_registration(local_registration->id))) {
-      return err;
+      goto error_out;
     }
     local_registration = local_registration->next_reg;
   }
 
   return NULL;
+
+error_out:
+  return cme_return(err);
 };
 
 void cmi_destroy(void) {
@@ -107,9 +116,7 @@ void cmi_destroy(void) {
     local_registration = next;
   }
 
-  if (cmi_error) {
-    cmi_error_destroy(&cmi_error);
-  }
+  cme_destroy();
 };
 
 void cmi_configure(void (*log_func)(enum cmi_LogLevelEnum log_level,
@@ -117,8 +124,8 @@ void cmi_configure(void (*log_func)(enum cmi_LogLevelEnum log_level,
   cmi_settings.log_func = log_func;
 }
 
-cmi_error_t cmi_init_registration(char *id) {
-  cmi_error_t err;
+cme_error_t cmi_init_registration(char *id) {
+  cme_error_t err;
   int _err;
 
   CMI_FOREACH_REGISTRATION(local_registration, cmi_registrations) {
@@ -131,15 +138,16 @@ cmi_error_t cmi_init_registration(char *id) {
            i < local_registration->dependencies.dependencies_length; i++) {
         if ((err = cmi_init_registration(
                  local_registration->dependencies.dependencies[i]))) {
-          return err;
+          goto error_out;
         }
       }
 
       if (local_registration->init_func &&
           (_err = local_registration->init_func())) {
-        return cmi_errorf(_err,
-                          "Init func failed for `local_registration->id=%s`\n",
-                          local_registration->id);
+        err = cme_errorf(_err,
+                         "Init func failed for `local_registration->id=%s`\n",
+                         local_registration->id);
+        goto error_out;
       }
 
       local_registration->is_initiated = true;
@@ -150,6 +158,9 @@ cmi_error_t cmi_init_registration(char *id) {
   // If registration is missing this means the package doesn't have any
   // dependencies so we can just return NULL as it was succesfully initiated.
   return NULL;
+
+error_out:
+  return cme_return(err);
 };
 
 void cmi_destroy_registration(char *id) {
@@ -189,12 +200,11 @@ void cmi_destroy_registration(char *id) {
   CMI_LOG(cmi_settings, cmi_LogLevelEnum_DEBUG, "Closed %s\n", id); // NOLINT
 }
 
-MOCKABLE_STATIC(cmi_error_t cmi_append_registration(
+MOCKABLE_STATIC(cme_error_t cmi_append_registration(
     struct cmi_Registration *registration)) {
-  cmi_error_t err;
+  cme_error_t err;
   if (!registration) {
-    err =
-        cmi_errorf(EINVAL, "`registration=%p` cannot be NULL\n", registration);
+    err = cme_error(EINVAL, "`registration` cannot be NULL\n");
     goto error_out;
   }
 
@@ -213,5 +223,5 @@ MOCKABLE_STATIC(cmi_error_t cmi_append_registration(
   return NULL;
 
 error_out:
-  return err;
+  return cme_return(err);
 }

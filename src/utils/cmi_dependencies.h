@@ -17,7 +17,7 @@ struct cmi_Dependencies {
   char **dependencies;
 };
 
-cmi_error_t cmi_dependencies_init(const uint32_t dependencies_length,
+cme_error_t cmi_dependencies_init(const uint32_t dependencies_length,
                                   const char **dependencies,
                                   struct cmi_Dependencies *output);
 
