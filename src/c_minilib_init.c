@@ -142,6 +142,9 @@ cme_error_t cmi_init_registration(char *id) {
         }
       }
 
+      CMI_LOG(cmi_settings, cmi_LogLevelEnum_DEBUG, "Initiating %s\n",
+              id); // NOLINT
+
       if (local_registration->init_func &&
           (_err = local_registration->init_func())) {
         err = cme_errorf(_err,
@@ -149,6 +152,9 @@ cme_error_t cmi_init_registration(char *id) {
                          local_registration->id);
         goto error_out;
       }
+
+      CMI_LOG(cmi_settings, cmi_LogLevelEnum_DEBUG, "Initiated %s\n",
+              id); // NOLINT
 
       local_registration->is_initiated = true;
       break;
